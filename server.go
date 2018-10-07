@@ -5,7 +5,10 @@ import (
 	"html/template"
 	"net/http"
 	"regexp"
+	"time"
 )
+
+var timeStarted = time.Now()
 
 func handler(w http.ResponseWriter, r *http.Request){
 	switch r.Method {
@@ -24,7 +27,8 @@ func handler(w http.ResponseWriter, r *http.Request){
 			http.Error(w,err.Error(),http.StatusInternalServerError)
 		}
 		if res{
-			fmt.Fprintln(w,"File format is correct")
+			v := FormatSince(timeStarted)
+			fmt.Fprintf(w,"File format is correct \n Time: %s",v)
 			return
 		}else {
 			fmt.Println("Invalid file format, only IGC file!!")
@@ -42,4 +46,28 @@ func handler(w http.ResponseWriter, r *http.Request){
 func main() {
 	http.HandleFunc("/igcinfo",handler)
 	http.ListenAndServe(":8080",nil)
+}
+func FormatSince(t time.Time) string {
+	const (
+		Decisecond = 100 * time.Millisecond
+		Day        = 24 * time.Hour
+	)
+	ts := time.Since(t)
+	sign := time.Duration(1)
+	if ts < 0 {
+		sign = -1
+		ts = -ts
+	}
+	ts += +Decisecond / 2
+	d := sign * (ts / Day)
+	ts = ts % Day
+	h := ts / time.Hour
+	ts = ts % time.Hour
+	m := ts / time.Minute
+	ts = ts % time.Minute
+	s := ts / time.Second
+	ts = ts % time.Second
+	f := ts / Decisecond
+	y := d / 365
+	return fmt.Sprintf("P%dY%dD%dH%dM%d.%dS", y, d, h, m, s, f)
 }
