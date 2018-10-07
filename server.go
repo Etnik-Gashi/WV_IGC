@@ -6,9 +6,24 @@ import (
 	"net/http"
 	"regexp"
 	"time"
+	igc "github.com/marni/goigc"
+	//"math/rand"
+	"encoding/json"
+    //"strconv"
 )
+type metaInfo struct {
+	Uptime string `json:"uptime"`
+	Info string `json:"info"`
+	Version string `json:"version"`
+
+}
 
 var timeStarted = time.Now()
+
+type _url struct {
+	URL string `json:"url"`
+}
+
 
 func handler(w http.ResponseWriter, r *http.Request){
 	switch r.Method {
@@ -27,8 +42,22 @@ func handler(w http.ResponseWriter, r *http.Request){
 			http.Error(w,err.Error(),http.StatusInternalServerError)
 		}
 		if res{
-			v := FormatSince(timeStarted)
-			fmt.Fprintf(w,"File format is correct \n Time: %s",v)
+			URL := &_url{}
+			URL.URL = r.FormValue("url")
+			// var jsonR map[string]string
+			var _ = json.NewDecoder(r.Body).Decode(URL)
+
+			track,_ := igc.ParseLocation(URL.URL)
+			response := "{"
+			response += "\"id\": " + "\"" + track.UniqueID + "\","
+			response += "\"url\": " + "\"" + URL.URL + "\""
+			response += "}"
+
+
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, response)
+
+
 			return
 		}else {
 			fmt.Println("Invalid file format, only IGC file!!")
@@ -42,9 +71,25 @@ func handler(w http.ResponseWriter, r *http.Request){
 
 
 }
+func handler2(w http.ResponseWriter,r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+
+	uptime := FormatSince(timeStarted)
+
+
+	metaStruct := &metaInfo{}
+
+	metaStruct.Uptime = uptime
+	metaStruct.Info = "Service for igc tracks"
+	metaStruct.Version = "v1"
+
+	json.NewEncoder(w).Encode(metaStruct)
+}
 
 func main() {
-	http.HandleFunc("/igcinfo",handler)
+
+	http.HandleFunc("/igcinfo/api",handler2)
+	http.HandleFunc("/igcinfo/api/igc",handler)
 	http.ListenAndServe(":8080",nil)
 }
 func FormatSince(t time.Time) string {
