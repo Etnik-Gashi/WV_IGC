@@ -25,7 +25,7 @@ type _url struct {
 }
 
 
-func handler(w http.ResponseWriter, r *http.Request){
+func handler2(w http.ResponseWriter, r *http.Request){
 	switch r.Method {
 	case http.MethodGet:
 		temp,err:=template.ParseFiles("wv.html")
@@ -35,7 +35,7 @@ func handler(w http.ResponseWriter, r *http.Request){
 		temp.Execute(w,nil)
 		break
 	case http.MethodPost:
-		input:=r.PostFormValue("inputi")
+		input:=r.FormValue("inputi")
 		pattern:=".*.igc"
 		res,err:=regexp.MatchString(pattern,input)
 		if err != nil{
@@ -43,19 +43,19 @@ func handler(w http.ResponseWriter, r *http.Request){
 		}
 		if res{
 			URL := &_url{}
-			URL.URL = r.FormValue("url")
-			// var jsonR map[string]string
+			URL.URL = r.FormValue("inputi")
+			jsonR := make(map[string]string)
+
 			var _ = json.NewDecoder(r.Body).Decode(URL)
 
 			track,_ := igc.ParseLocation(URL.URL)
-			response := "{"
-			response += "\"id\": " + "\"" + track.UniqueID + "\","
-			response += "\"url\": " + "\"" + URL.URL + "\""
-			response += "}"
+
 
 
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, response)
+			jsonR["id"]=track.UniqueID;
+			jsonR["url"]=URL.URL
+			fmt.Fprintf(w, "{"+ "\"id\": " + "\"" + jsonR["id"] + "\","+ "\"url\": " + "\"" + jsonR["url"] + "\""+"}")
 
 
 			return
@@ -71,25 +71,18 @@ func handler(w http.ResponseWriter, r *http.Request){
 
 
 }
-func handler2(w http.ResponseWriter,r *http.Request){
+func handler(w http.ResponseWriter,r *http.Request){
+	// Set response content-type to JSON
 	w.Header().Set("Content-Type", "application/json")
 
-	uptime := FormatSince(timeStarted)
-
-
-	metaStruct := &metaInfo{}
-
-	metaStruct.Uptime = uptime
-	metaStruct.Info = "Service for igc tracks"
-	metaStruct.Version = "v1"
-
-	json.NewEncoder(w).Encode(metaStruct)
+	// Calculate the time elapsed by subtracting the times
+	fmt.Fprintln(w, "{" + "\"uptime\": \""+FormatSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\","+ "\"version\": \"v1\""+ "}")
 }
 
 func main() {
 
-	http.HandleFunc("/igcinfo/api",handler2)
-	http.HandleFunc("/igcinfo/api/igc",handler)
+	http.HandleFunc("/igcinfo/api/",handler)
+	http.HandleFunc("/igcinfo/api/igc",handler2)
 	http.ListenAndServe(":8080",nil)
 }
 func FormatSince(t time.Time) string {
