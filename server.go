@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"encoding/json"
     "strconv"
+	//"path/filepath"
+	"strings"
 )
 
 
@@ -20,11 +22,30 @@ type _url struct {
 }
 var igcFiles []Track
 
+func trackLength(track igc.Track) float64 {
+
+	totalDistance := 0.0
+
+	for i := 0; i < len(track.Points)-1; i++ {
+		totalDistance += track.Points[i].Distance(track.Points[i+1])
+	}
+
+	return totalDistance
+}
+
 
 type Track struct {
 	Id string   `json:"id"`
 	igcTrack igc.Track `json:"igc_track"`
 }
+type Attributes struct{
+	HeaderDate string `json:"h_date"`
+	Pilot string `json:"pilot"`
+	Glider string `json:"glider"`
+	Gl_id string 	`json :"glider_id"`
+	Length float64 `json:"track_length"`
+}
+
 func handler(w http.ResponseWriter,r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, "{" + "\"uptime\": \""+FormatSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\"," + "\"version\": \"v1\""+ "}")
@@ -59,6 +80,8 @@ func handler2(w http.ResponseWriter, r *http.Request){
 		res,err:=regexp.MatchString(pattern,URL.URL)
 		if err!=nil{
 			http.Error(w,err.Error(),http.StatusInternalServerError)
+			fmt.Fprintln(w, "Error!! ", error)
+			return
 		}
 		if res {
 
@@ -86,13 +109,47 @@ func handler2(w http.ResponseWriter, r *http.Request){
 }
 
 
+func handler3(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Content-Type", "application/json")
+	parts := strings.Split(r.URL.Path, "/")
 
+	//vals := r.URL.Query() // Returns a url.Values, which is a map[string][]string
 
+	//productTypes, ok := vals["id"]
+
+	attributes := &Attributes{}
+
+	var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}`)
+	switch {
+	case rNum.MatchString(r.URL.Path):
+
+		for i := range igcFiles {
+
+			if igcFiles[i].Id == parts[4] {
+				attributes.HeaderDate = igcFiles[i].igcTrack.Header.Date.String()
+				attributes.Pilot = igcFiles[i].igcTrack.Pilot
+				attributes.Glider = igcFiles[i].igcTrack.GliderType
+				attributes.Gl_id= igcFiles[i].igcTrack.GliderID
+				attributes.Length = trackLength(igcFiles[i].igcTrack)
+
+				json.NewEncoder(w).Encode(attributes)
+			}
+
+		}
+
+	break
+	default:
+		fmt.Fprintln(w, "Error: something goes wrong!!")
+
+	}
+
+}
 func main() {
 
-	http.HandleFunc("/igcinfo/api/",handler)
-	http.HandleFunc("/igcinfo/api/igc/",handler2)
+	http.HandleFunc("/igcinfo/api",handler)
+	http.HandleFunc("/igcinfo/api/igc",handler2)
+	http.HandleFunc("/",handler3)
 	http.ListenAndServe(":8080",nil)
 }
 func FormatSince(t time.Time) string {
