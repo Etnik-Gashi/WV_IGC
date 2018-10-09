@@ -145,6 +145,55 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+//Kete funksionin tjeter me shti ne handler3 edhe me thirr permes kushtit te len(parts)==4
+
+
+func handler4(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	parts := strings.Split(r.URL.Path, "/")
+	//attributes := &Attributes{}
+
+	var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}/\w{1,}`)
+	switch {
+	case rNum.MatchString(r.URL.Path):
+
+		for i := range igcFiles {
+
+			if igcFiles[i].Id == parts[4] {
+				switch{
+				case parts[5]=="pilot":
+					json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Pilot)
+					break
+				case parts[5]=="glider":
+					json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderType)
+					break
+				case parts[5]=="glider_id":
+					json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderID)
+					break
+				case parts[5]=="track_length":
+					json.NewEncoder(w).Encode(trackLength(igcFiles[i].igcTrack))
+					break
+				case parts[5]=="h_date":
+					json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Header.Date.String())
+					break
+				default:
+					http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
+					break
+				}
+
+			}
+
+		}
+
+		break
+	default:
+		fmt.Fprintln(w, "Error: something goes wrong!!")
+
+	}
+
+
+}
 func main() {
 
 	http.HandleFunc("/igcinfo/api",handler)
