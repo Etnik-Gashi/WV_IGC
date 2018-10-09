@@ -2,65 +2,78 @@ package main
 
 import (
 	"fmt"
-	"html/template"
+	//"html/template"
 	"net/http"
 	"regexp"
 	"time"
 	igc "github.com/marni/goigc"
-	//"math/rand"
+	"math/rand"
 	"encoding/json"
-    //"strconv"
+    "strconv"
 )
-type metaInfo struct {
-	Uptime string `json:"uptime"`
-	Info string `json:"info"`
-	Version string `json:"version"`
 
-}
 
 var timeStarted = time.Now()
 
 type _url struct {
 	URL string `json:"url"`
 }
+var igcFiles []Track
 
+
+type Track struct {
+	Id string   `json:"id"`
+	igcTrack igc.Track `json:"igc_track"`
+}
+func handler(w http.ResponseWriter,r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, "{" + "\"uptime\": \""+FormatSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\"," + "\"version\": \"v1\""+ "}")
+}
 
 func handler2(w http.ResponseWriter, r *http.Request){
 	switch r.Method {
 	case http.MethodGet:
-		temp,err:=template.ParseFiles("wv.html")
-		if err !=nil{
-			http.Error(w,"Error",http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		ids := make([]string, 0, 0)
+
+		for i := range igcFiles {
+			ids = append(ids, igcFiles[i].Id)
 		}
-		temp.Execute(w,nil)
+
+		json.NewEncoder(w).Encode(ids)
+
 		break
 	case http.MethodPost:
-		input:=r.FormValue("inputi")
+
 		pattern:=".*.igc"
-		res,err:=regexp.MatchString(pattern,input)
-		if err != nil{
+
+		w.Header().Set("Content-Type", "application/json")
+		//jsonR := make(map[string]string)
+		URL := &_url{}
+
+		var error = json.NewDecoder(r.Body).Decode(URL)
+		if error != nil {
+			fmt.Fprintln(w, "Error!! ", error)
+			return
+		}
+		res,err:=regexp.MatchString(pattern,URL.URL)
+		if err!=nil{
 			http.Error(w,err.Error(),http.StatusInternalServerError)
 		}
-		if res{
-			URL := &_url{}
-			URL.URL = r.FormValue("inputi")
-			jsonR := make(map[string]string)
+		if res {
 
-			var _ = json.NewDecoder(r.Body).Decode(URL)
+			track, _ := igc.ParseLocation(URL.URL)
 
-			track,_ := igc.ParseLocation(URL.URL)
+			Id := rand.Intn(1000)
 
+			igcFile := Track{}
+			igcFile.Id = strconv.Itoa(Id)
+			igcFile.igcTrack = track
 
+			igcFiles = append(igcFiles, igcFile)
 
-			w.Header().Set("Content-Type", "application/json")
-			jsonR["id"]=track.UniqueID;
-			jsonR["url"]=URL.URL
-			fmt.Fprintf(w, "{"+ "\"id\": " + "\"" + jsonR["id"] + "\","+ "\"url\": " + "\"" + jsonR["url"] + "\""+"}")
-
-
+			json.NewEncoder(w).Encode(igcFile.Id)
 			return
-		}else {
-			fmt.Println("Invalid file format, only IGC file!!")
 		}
 		break
 	default:
@@ -71,18 +84,15 @@ func handler2(w http.ResponseWriter, r *http.Request){
 
 
 }
-func handler(w http.ResponseWriter,r *http.Request){
-	// Set response content-type to JSON
-	w.Header().Set("Content-Type", "application/json")
 
-	// Calculate the time elapsed by subtracting the times
-	fmt.Fprintln(w, "{" + "\"uptime\": \""+FormatSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\","+ "\"version\": \"v1\""+ "}")
-}
+
+
+
 
 func main() {
 
 	http.HandleFunc("/igcinfo/api/",handler)
-	http.HandleFunc("/igcinfo/api/igc",handler2)
+	http.HandleFunc("/igcinfo/api/igc/",handler2)
 	http.ListenAndServe(":8080",nil)
 }
 func FormatSince(t time.Time) string {
