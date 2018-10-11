@@ -17,10 +17,12 @@ import (
 
 var timeStarted = time.Now()
 
+var igcFiles []Track
+
+
 type _url struct {
 	URL string `json:"url"`
 }
-var igcFiles []Track
 
 func trackLength(track igc.Track) float64 {
 
@@ -38,6 +40,7 @@ type Track struct {
 	Id string   `json:"id"`
 	igcTrack igc.Track `json:"igc_track"`
 }
+
 type Attributes struct{
 	HeaderDate string `json:"h_date"`
 	Pilot string `json:"pilot"`
@@ -48,7 +51,7 @@ type Attributes struct{
 
 func handler(w http.ResponseWriter,r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, "{" + "\"uptime\": \""+FormatSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\"," + "\"version\": \"v1\""+ "}")
+	fmt.Fprintln(w, "{" + "\"uptime\": \""+timeSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\"," + "\"version\": \"v1\""+ "}")
 }
 
 func handler2(w http.ResponseWriter, r *http.Request){
@@ -113,7 +116,7 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	parts := strings.Split(r.URL.Path, "/")
-
+	//Handling for GET /api/igc/<id>
 	if len(parts)==5 {
 
 		//vals := r.URL.Query() // Returns a url.Values, which is a map[string][]string
@@ -146,6 +149,7 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 
 		}
 	}
+	//Handling for GET /api/igc/<id>/<field>
 	if len(parts)>5{
 		var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}/\w{1,}`)
 		switch {
@@ -189,17 +193,10 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//Kete funksionin tjeter me shti ne handler3 edhe me thirr permes kushtit te len(parts)==4
-
-/*
-func handler4(w http.ResponseWriter, r *http.Request){
-	w.Header().Set("Content-Type", "application/json")
-	parts := strings.Split(r.URL.Path, "/")
-	//attributes := &Attributes{}
+//Kqyr kohen edhe regex me igc edhe testimet
 
 
 
-}*/
 func main() {
 
 	http.HandleFunc("/igcinfo/api",handler)
@@ -207,18 +204,15 @@ func main() {
 	http.HandleFunc("/",handler3)
 	http.ListenAndServe(":8080",nil)
 }
-func FormatSince(t time.Time) string {
-	const (
-		Decisecond = 100 * time.Millisecond
-		Day        = 24 * time.Hour
-	)
+func timeSince(t time.Time) string {
+
+	Decisecond := 100 * time.Millisecond
+	Day        := 24 * time.Hour
+
 	ts := time.Since(t)
 	sign := time.Duration(1)
-	if ts < 0 {
-		sign = -1
-		ts = -ts
-	}
-	ts += +Decisecond / 2
+
+	ts += Decisecond / 2
 	d := sign * (ts / Day)
 	ts = ts % Day
 	h := ts / time.Hour
