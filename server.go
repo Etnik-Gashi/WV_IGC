@@ -52,175 +52,168 @@ type Attributes struct{
 func handler(w http.ResponseWriter,r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	parts := strings.Split(r.URL.Path, "/")
+	//var empty = regexp.MustCompile(``)
+	var api= regexp.MustCompile(`api`)
 	switch {
-	case len(parts)==3:
-		fmt.Fprintln(w, "{"+"\"uptime\": \""+timeSince(timeStarted)+"\","+"\"info\": \"Service for IGC tracks.\","+"\"version\": \"v1\""+"}")
-	break
-	}
-}
-func handler2(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	parts := strings.Split(r.URL.Path, "/")
 
-	if len(parts)==4 {
-		var rNum = regexp.MustCompile(`/igcinfo/api/igc`)
-		switch {
-		case rNum.MatchString(r.URL.Path):
-			switch r.Method {
-			case http.MethodGet:
-				ids := make([]string, 0, 0)
+		case len(parts) == 2 :
+			http.Error(w, "404 - Page not found!", http.StatusNotFound)
+		break
+
+
+		case len(parts) == 3 && api.MatchString(parts[2]) :
+			fmt.Fprintln(w, "{"+"\"uptime\": \""+timeSince(timeStarted)+"\","+"\"info\": \"Service for IGC tracks.\","+"\"version\": \"v1\""+"}")
+		break
+		case len(parts) == 4 :
+			{
+			var rNum= regexp.MustCompile(`/igcinfo/api/igc`)
+			switch {
+			case rNum.MatchString(r.URL.Path):
+				switch r.Method {
+				case http.MethodGet:
+					ids := make([]string, 0, 0)
+
+					for i := range igcFiles {
+						ids = append(ids, igcFiles[i].Id)
+					}
+
+					json.NewEncoder(w).Encode(ids)
+
+					break
+				case http.MethodPost:
+
+					pattern := ".*.igc"
+
+					//jsonR := make(map[string]string)
+					URL := &_url{}
+
+					var error= json.NewDecoder(r.Body).Decode(URL)
+					if error != nil {
+						fmt.Fprintln(w, "Error!! ", error)
+						return
+					}
+					res, err := regexp.MatchString(pattern, URL.URL)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						fmt.Fprintln(w, "Error!! ", error)
+						return
+					}
+					if res {
+
+						track, _ := igc.ParseLocation(URL.URL)
+
+						Id := rand.Intn(1000)
+
+						igcFile := Track{}
+						igcFile.Id = strconv.Itoa(Id)
+						igcFile.igcTrack = track
+
+						igcFiles = append(igcFiles, igcFile)
+
+						json.NewEncoder(w).Encode(igcFile.Id)
+						return
+					}
+					break
+				default:
+					http.Error(w, "Not implemented", http.StatusNotImplemented)
+
+				}
+			default:
+				http.Error(w, "404 - Page not found!", http.StatusNotFound)
+				break
+			}
+
+		}
+		break
+		case len(parts) == 5 : {
+
+			//vals := r.URL.Query() // Returns a url.Values, which is a map[string][]string
+
+			//productTypes, ok := vals["id"]
+
+			attributes := &Attributes{}
+
+			var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}`)
+			switch {
+			case rNum.MatchString(r.URL.Path):
 
 				for i := range igcFiles {
-					ids = append(ids, igcFiles[i].Id)
-				}
 
-				json.NewEncoder(w).Encode(ids)
+					if igcFiles[i].Id == parts[4] {
+						attributes.HeaderDate = igcFiles[i].igcTrack.Header.Date.String()
+						attributes.Pilot = igcFiles[i].igcTrack.Pilot
+						attributes.Glider = igcFiles[i].igcTrack.GliderType
+						attributes.Gl_id = igcFiles[i].igcTrack.GliderID
+						attributes.Length = trackLength(igcFiles[i].igcTrack)
 
-				break
-			case http.MethodPost:
-
-				pattern := ".*.igc"
-
-				//jsonR := make(map[string]string)
-				URL := &_url{}
-
-				var error = json.NewDecoder(r.Body).Decode(URL)
-				if error != nil {
-					fmt.Fprintln(w, "Error!! ", error)
-					return
-				}
-				res, err := regexp.MatchString(pattern, URL.URL)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					fmt.Fprintln(w, "Error!! ", error)
-					return
-				}
-				if res {
-
-					track, _ := igc.ParseLocation(URL.URL)
-
-					Id := rand.Intn(1000)
-
-					igcFile := Track{}
-					igcFile.Id = strconv.Itoa(Id)
-					igcFile.igcTrack = track
-
-					igcFiles = append(igcFiles, igcFile)
-
-					json.NewEncoder(w).Encode(igcFile.Id)
-					return
-				}
-				break
-			default:
-				http.Error(w, "Not implemented", http.StatusNotImplemented)
-
-			}
-		default:
-			fmt.Fprintln(w, "Error: something goes wrong!!")
-
-		}
-
-	}
-	if parts[4]==""{
-
-		http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
-
-
-	}
-}
-
-
-func handler3(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Content-Type", "application/json")
-	parts := strings.Split(r.URL.Path, "/")
-	//Handling for GET /api/igc/<id>
-	if len(parts)==5 {
-
-		//vals := r.URL.Query() // Returns a url.Values, which is a map[string][]string
-
-		//productTypes, ok := vals["id"]
-
-		attributes := &Attributes{}
-
-		var rNum = regexp.MustCompile(`/igcinfo/api/igc/\d{1,}`)
-		switch {
-		case rNum.MatchString(r.URL.Path):
-
-			for i := range igcFiles {
-
-				if igcFiles[i].Id == parts[4] {
-					attributes.HeaderDate = igcFiles[i].igcTrack.Header.Date.String()
-					attributes.Pilot = igcFiles[i].igcTrack.Pilot
-					attributes.Glider = igcFiles[i].igcTrack.GliderType
-					attributes.Gl_id = igcFiles[i].igcTrack.GliderID
-					attributes.Length = trackLength(igcFiles[i].igcTrack)
-
-					json.NewEncoder(w).Encode(attributes)
-				}
-
-			}
-
-			break
-		default:
-			http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
-
-		}
-	}
-
-	//Handling for GET /api/igc/<id>/<field>
-	if len(parts)>5{
-		var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}/\w{1,}`)
-		switch {
-		case rNum.MatchString(r.URL.Path):
-
-			for i := range igcFiles {
-
-				if igcFiles[i].Id == parts[4] {
-					switch{
-					case parts[5]=="pilot":
-						json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Pilot)
-						break
-					case parts[5]=="glider":
-						json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderType)
-						break
-					case parts[5]=="glider_id":
-						json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderID)
-						break
-					case parts[5]=="track_length":
-						json.NewEncoder(w).Encode(trackLength(igcFiles[i].igcTrack))
-						break
-					case parts[5]=="h_date":
-						json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Header.Date.String())
-						break
-					default:
-						http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
-						break
+						json.NewEncoder(w).Encode(attributes)
 					}
 
 				}
 
+				break
+			default:
+				http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
+
+			}
+		}
+		break
+
+		//Handling for GET /api/igc/<id>/<field>
+		case len(parts) == 6 :{
+			var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}/\w{1,}`)
+			switch {
+			case rNum.MatchString(r.URL.Path):
+
+				for i := range igcFiles {
+
+					if igcFiles[i].Id == parts[4] {
+						switch {
+						case parts[5] == "pilot":
+							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Pilot)
+							break
+						case parts[5] == "glider":
+							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderType)
+							break
+						case parts[5] == "glider_id":
+							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderID)
+							break
+						case parts[5] == "track_length":
+							json.NewEncoder(w).Encode(trackLength(igcFiles[i].igcTrack))
+							break
+						case parts[5] == "h_date":
+							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Header.Date.String())
+							break
+						default:
+							http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
+							break
+						}
+
+					}
+
+				}
+				break
+			default:
+				http.Error(w, "400 - Bad Request", http.StatusBadRequest)
+
 			}
 
-			break
-		default:
-			http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
-
 		}
+		break
+	case len(parts)>6:{
+		http.Error(w, "404 - Page not found!", http.StatusNotFound)
 
-
+	}
+		break
+	default:
+		http.Error(w, "404 - Page not found!", http.StatusNotFound)
+		break
 	}
 }
 
-//Kqyr kohen edhe regex me igc edhe testimet
-
-
-
 func main() {
 
-	http.HandleFunc("/igcinfo/api",handler)
-	http.HandleFunc("/igcinfo/api/igc",handler2)
-	http.HandleFunc("/",handler3)
+	http.HandleFunc("/",handler)
 	http.ListenAndServe(":8080",nil)
 }
 func timeSince(t time.Time) string {
