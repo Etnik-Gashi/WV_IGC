@@ -49,66 +49,84 @@ type Attributes struct{
 	Length float64 `json:"track_length"`
 }
 
-func handler(w http.ResponseWriter,r *http.Request){
+func handler(w http.ResponseWriter,r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, "{" + "\"uptime\": \""+timeSince(timeStarted)+"\"," + "\"info\": \"Service for IGC tracks.\"," + "\"version\": \"v1\""+ "}")
+	parts := strings.Split(r.URL.Path, "/")
+	switch {
+	case len(parts)==3:
+		fmt.Fprintln(w, "{"+"\"uptime\": \""+timeSince(timeStarted)+"\","+"\"info\": \"Service for IGC tracks.\","+"\"version\": \"v1\""+"}")
+	break
+	}
 }
+func handler2(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	parts := strings.Split(r.URL.Path, "/")
 
-func handler2(w http.ResponseWriter, r *http.Request){
-	switch r.Method {
-	case http.MethodGet:
-		w.Header().Set("Content-Type", "application/json")
-		ids := make([]string, 0, 0)
+	if len(parts)==4 {
+		var rNum = regexp.MustCompile(`/igcinfo/api/igc`)
+		switch {
+		case rNum.MatchString(r.URL.Path):
+			switch r.Method {
+			case http.MethodGet:
+				ids := make([]string, 0, 0)
 
-		for i := range igcFiles {
-			ids = append(ids, igcFiles[i].Id)
+				for i := range igcFiles {
+					ids = append(ids, igcFiles[i].Id)
+				}
+
+				json.NewEncoder(w).Encode(ids)
+
+				break
+			case http.MethodPost:
+
+				pattern := ".*.igc"
+
+				//jsonR := make(map[string]string)
+				URL := &_url{}
+
+				var error = json.NewDecoder(r.Body).Decode(URL)
+				if error != nil {
+					fmt.Fprintln(w, "Error!! ", error)
+					return
+				}
+				res, err := regexp.MatchString(pattern, URL.URL)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					fmt.Fprintln(w, "Error!! ", error)
+					return
+				}
+				if res {
+
+					track, _ := igc.ParseLocation(URL.URL)
+
+					Id := rand.Intn(1000)
+
+					igcFile := Track{}
+					igcFile.Id = strconv.Itoa(Id)
+					igcFile.igcTrack = track
+
+					igcFiles = append(igcFiles, igcFile)
+
+					json.NewEncoder(w).Encode(igcFile.Id)
+					return
+				}
+				break
+			default:
+				http.Error(w, "Not implemented", http.StatusNotImplemented)
+
+			}
+		default:
+			fmt.Fprintln(w, "Error: something goes wrong!!")
+
 		}
 
-		json.NewEncoder(w).Encode(ids)
+	}
+	if parts[4]==""{
 
-		break
-	case http.MethodPost:
-
-		pattern:=".*.igc"
-
-		w.Header().Set("Content-Type", "application/json")
-		//jsonR := make(map[string]string)
-		URL := &_url{}
-
-		var error = json.NewDecoder(r.Body).Decode(URL)
-		if error != nil {
-			fmt.Fprintln(w, "Error!! ", error)
-			return
-		}
-		res,err:=regexp.MatchString(pattern,URL.URL)
-		if err!=nil{
-			http.Error(w,err.Error(),http.StatusInternalServerError)
-			fmt.Fprintln(w, "Error!! ", error)
-			return
-		}
-		if res {
-
-			track, _ := igc.ParseLocation(URL.URL)
-
-			Id := rand.Intn(1000)
-
-			igcFile := Track{}
-			igcFile.Id = strconv.Itoa(Id)
-			igcFile.igcTrack = track
-
-			igcFiles = append(igcFiles, igcFile)
-
-			json.NewEncoder(w).Encode(igcFile.Id)
-			return
-		}
-		break
-	default:
-		http.Error(w,"Not implemented",http.StatusNotImplemented)
+		http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
 
 
 	}
-
-
 }
 
 
@@ -145,10 +163,11 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 
 			break
 		default:
-			fmt.Fprintln(w, "Error: something goes wrong!!")
+			http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
 
 		}
 	}
+
 	//Handling for GET /api/igc/<id>/<field>
 	if len(parts)>5{
 		var rNum= regexp.MustCompile(`/igcinfo/api/igc/\d{1,}/\w{1,}`)
@@ -185,7 +204,7 @@ func handler3(w http.ResponseWriter, r *http.Request) {
 
 			break
 		default:
-			fmt.Fprintln(w, "Error: something goes wrong!!")
+			http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
 
 		}
 
