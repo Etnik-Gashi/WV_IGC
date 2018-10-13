@@ -13,7 +13,6 @@ import (
 
 func Test_handler_notImplemented(t *testing.T) {
 	// instantiate mock HTTP server
-	// register our handlerStudent <-- actual logic
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
