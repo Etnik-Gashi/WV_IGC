@@ -154,6 +154,9 @@ func handler(w http.ResponseWriter,r *http.Request) {
 
 						json.NewEncoder(w).Encode(attributes)
 					}
+					if igcFiles[i].Id != parts[4]{
+						http.Error(w, "404 - Page not found!", http.StatusNotFound)
+					}
 
 				}
 
@@ -221,7 +224,7 @@ func main() {
 
 	http.HandleFunc("/",handler)
 	fmt.Println("listening...")
-	 	err := http.ListenAndServe(GetPort(), nil)
+    err := http.ListenAndServe(":" + os.Getenv("PORT"), nil)
 	 	if err != nil {
 		 		log.Fatal("ListenAndServe: ", err)
 		 	}
