@@ -1,20 +1,20 @@
-package WV_IGC
+package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	//"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	//"strings"
 	"testing"
-	"server.go"
+
 )
 
 
-func Test_handler2_notImplemented(t *testing.T) {
+func Test_handler_notImplemented(t *testing.T) {
 	// instantiate mock HTTP server
 	// register our handlerStudent <-- actual logic
-	ts := httptest.NewServer(http.HandlerFunc(handler2))
+	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
 	// create a request to our mock HTTP server
@@ -36,13 +36,15 @@ func Test_handler2_notImplemented(t *testing.T) {
 	}
 }
 
-func Test_handler2_malformedURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(handler2))
+
+func Test_handler_malformedURL(t *testing.T) {
+	//the mock HTTP server
+	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
 	testCases := []string{
 		ts.URL,
-		ts.URL + "/igcinfo/api/extra",
+		ts.URL + "/igcinfo/987/",
 		ts.URL + "/igc/",
 	}
 	for _, tstring := range testCases {
@@ -58,12 +60,15 @@ func Test_handler2_malformedURL(t *testing.T) {
 		}
 	}
 }
-func Test_handler2_getAllIds_empty(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(handler2))
+
+
+
+func Test_handler_getAllIds_empty(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
 
-	resp, err := http.Get(ts.URL + "/igc/")
+	resp, err := http.Get(ts.URL+"/igcinfo/api/igc")
 	if err != nil {
 		t.Errorf("Error making the GET request, %s", err)
 	}
@@ -84,34 +89,8 @@ func Test_handler2_getAllIds_empty(t *testing.T) {
 	}
 }
 
-func Test_handler3_getAllById_59(t *testing.T) {
 
-	testTrack := Track{"59"}
 
-	ts := httptest.NewServer(http.HandlerFunc(HandlerStudent))
-	defer ts.Close()
 
-	resp, err := http.Get(ts.URL + "/student/")
-	if err != nil {
-		t.Errorf("Error making the GET request, %s", err)
-	}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected StatusCode %d, received %d", http.StatusOK, resp.StatusCode)
-		return
-	}
 
-	var a []Student
-	err = json.NewDecoder(resp.Body).Decode(&a)
-	if err != nil {
-		t.Errorf("Error parsing the expected JSON body. Got error: %s", err)
-	}
-
-	if len(a) != 1 {
-		t.Errorf("Excpected array with one element, got %v", a)
-	}
-
-	if a[0].Id != testTrack.Id || a[0].igcTrack != testTrack.igcTrack  {
-		t.Errorf("Students do not match! Got: %v, Expected: %v\n", a[0], testTrack)
-	}
-}
