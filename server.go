@@ -50,7 +50,6 @@ type Attributes struct{
 }
 
 func handler(w http.ResponseWriter,r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	parts := strings.Split(r.URL.Path, "/")
 	//var empty = regexp.MustCompile(``)
 	var api= regexp.MustCompile(`api`)
@@ -62,11 +61,14 @@ func handler(w http.ResponseWriter,r *http.Request) {
 
 
 		case len(parts) == 3 && api.MatchString(parts[2]) :
+			w.Header().Set("Content-Type", "application/json")
 			fmt.Fprintln(w, "{"+"\"uptime\": \""+timeSince(timeStarted)+"\","+"\"info\": \"Service for IGC tracks.\","+"\"version\": \"v1\""+"}")
 		break
 		case len(parts) == 4 :
 			{
-			var rNum= regexp.MustCompile(`/igcinfo/api/igc`)
+				w.Header().Set("Content-Type", "application/json")
+
+				var rNum= regexp.MustCompile(`/igcinfo/api/igc`)
 			switch {
 			case rNum.MatchString(r.URL.Path):
 				switch r.Method {
@@ -126,6 +128,8 @@ func handler(w http.ResponseWriter,r *http.Request) {
 		}
 		break
 		case len(parts) == 5 : {
+			w.Header().Set("Content-Type", "application/json")
+
 
 			//vals := r.URL.Query() // Returns a url.Values, which is a map[string][]string
 
@@ -170,19 +174,19 @@ func handler(w http.ResponseWriter,r *http.Request) {
 					if igcFiles[i].Id == parts[4] {
 						switch {
 						case parts[5] == "pilot":
-							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Pilot)
+							fmt.Fprintln(w,igcFiles[i].igcTrack.Pilot)
 							break
 						case parts[5] == "glider":
-							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderType)
+							fmt.Fprintln(w,igcFiles[i].igcTrack.GliderType)
 							break
 						case parts[5] == "glider_id":
-							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.GliderID)
+							fmt.Fprintln(w,igcFiles[i].igcTrack.GliderID)
 							break
 						case parts[5] == "track_length":
-							json.NewEncoder(w).Encode(trackLength(igcFiles[i].igcTrack))
+							fmt.Fprintln(w,trackLength(igcFiles[i].igcTrack))
 							break
 						case parts[5] == "h_date":
-							json.NewEncoder(w).Encode(igcFiles[i].igcTrack.Header.Date.String())
+							fmt.Fprintln(w,igcFiles[i].igcTrack.Header.Date.String())
 							break
 						default:
 							http.Error(w, "400 - Bad Request, the field you entered is not on our database!", http.StatusBadRequest)
