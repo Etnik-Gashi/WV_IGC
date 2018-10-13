@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	//"html/template"
 	"net/http"
 	"regexp"
@@ -218,7 +220,11 @@ func handler(w http.ResponseWriter,r *http.Request) {
 func main() {
 
 	http.HandleFunc("/",handler)
-	http.ListenAndServe(":8080",nil)
+	fmt.Println("listening...")
+	 	err := http.ListenAndServe(GetPort(), nil)
+	 	if err != nil {
+		 		log.Fatal("ListenAndServe: ", err)
+		 	}
 }
 func timeSince(t time.Time) string {
 
@@ -241,3 +247,15 @@ func timeSince(t time.Time) string {
 	y := d / 365
 	return fmt.Sprintf("P%dY%dD%dH%dM%d.%dS", y, d, h, m, s, f)
 }
+
+ // Get the Port from the environment so we can run on Heroku
+
+ func GetPort() string {
+	 	var port = os.Getenv("PORT")
+	 	// Set a default port if there is nothing in the environment
+	 	if port == "" {
+		 		port = "5555"
+		 		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
+		 	}
+	 	return ":" + port
+	 	}
