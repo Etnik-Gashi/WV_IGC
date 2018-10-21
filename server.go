@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http" //"html/template"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -286,12 +287,13 @@ func main() {
 
 	//fmt.Println("listening...")
 
-	/*err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+	err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
-	}*/
-	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatal(err)
 	}
+	/*if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatal(err)
+	}*/
 
 }
+
